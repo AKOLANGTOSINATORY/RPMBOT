@@ -1,89 +1,35 @@
 require("dotenv").config();
-const express = require("express");
-const rbx = require("noblox.js");
 const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
 
-// Universal fetch handler (Node 18+ native or node-fetch fallback)
+// Universal fetch handler (Node 18+ native or node-fetch dynamic fallback)
 const webFetch = typeof fetch === "function" 
     ? fetch 
     : (...args) => import('node-fetch').then(({default: f}) => f(...args));
 
-// ==========================================
-// 1. EXPRESS WEB SERVICE (RENDER & CRONITOR)
-// ==========================================
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Health check endpoint for Render & Cronitor pinging
-app.get("/", (req, res) => {
-    res.send("ORCA Development Broadcast & Roblox Ranker Service is alive!");
-});
-
-// Roblox Ranker Endpoint: GET /ranker?userid=12345&rank=2
-app.get("/ranker", async (req, res) => {
-    const userId = parseInt(req.query.userid);
-    const rank = parseInt(req.query.rank);
-    const groupId = parseInt(process.env.GROUP_ID || "0");
-
-    if (!userId || !rank) {
-        return res.status(400).json({ error: "Missing userid or rank parameter." });
-    }
-
-    if (!groupId) {
-        return res.status(500).json({ error: "GROUP_ID is not configured in environment variables." });
-    }
-
-    try {
-        await rbx.setRank(groupId, userId, rank);
-        console.log(`✅ [Ranker] Successfully ranked user ${userId} to rank ${rank}`);
-        res.json({ success: true, message: `Successfully set user ${userId} to rank ${rank}` });
-    } catch (err) {
-        console.error("❌ [Ranker] Failed to set rank:", err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Start Express HTTP Server FIRST so Render health checks pass immediately
-app.listen(PORT, () => {
-    console.log(`🚀 Web Service active and listening on port ${PORT}`);
-});
-
-// Initialize Roblox Login in the background
-const cookie = process.env.COOKIE;
-if (cookie) {
-    rbx.setCookie(cookie)
-        .then(() => console.log("✅ Roblox Ranker logged in successfully"))
-        .catch((err) => console.error("❌ Roblox Cookie login error:", err.message));
-} else {
-    console.warn("⚠️ Warning: COOKIE environment variable missing for Roblox Ranker.");
-}
-
-// ==========================================
-// 2. DISCORD BROADCAST BOT SYSTEM
-// ==========================================
+// --- CONFIGURATION ---
 const MAIN_TOKEN = process.env.TOKEN; 
 
-// RB2 Config (Token 1)
+// RB2 Configuration (Token 1)
 const RB2_TOKEN = process.env.DISCORD_TOKEN; 
 const parseChannels = (envVar) => envVar ? envVar.split(",").map(id => id.trim()).filter(Boolean) : [];
 
 const rb2Group1 = parseChannels(process.env.CHANNEL_ID);
 const rb2Group2 = parseChannels(process.env.CHANNEL_ID2);
 
-// RB1 Config (Token 2)
+// RB1 Configuration (Token 2)
 const RB1_TOKEN = process.env.DISCORD_TOKEN2;
 const rb1Group1 = parseChannels(process.env.CHANNEL_ID3);
 const rb1Group2 = parseChannels(process.env.CHANNEL_ID4);
 
 const PREFIX = "!";
 
-// Broadcast Execution Tracking
+// --- BROADCAST STATE TRACKING ---
 const state = {
     rb1: { isBlasting: false, stopBlast: false },
     rb2: { isBlasting: false, stopBlast: false }
 };
 
-// Ad Message Templates
+// --- AD MESSAGES ---
 const messageGroup1 = `
 # ORCA Development
 At ORCA Development, we offer a wide range of Roblox military assets, games, scripts, guns, and more to improve your military gaming experience and bring a modern touch to your games.
@@ -126,7 +72,7 @@ https://orcadev.net/b/0KlWT
 Bring your Roblox projects to life with ORCA Development – quality assets, made easy!
 `;
 
-// Discord REST API Helper Functions
+// --- DISCORD REST API HELPERS ---
 async function getServerName(channelId, token) {
     try {
         const res = await webFetch(`https://discord.com/api/v10/channels/${channelId}`, {
@@ -188,7 +134,7 @@ async function sendAd(channelId, content, token) {
     }
 }
 
-// Dual Embed Live Broadcast Executor
+// --- CORE BLAST CONTROLLER (WITH DUAL EMBED LIVE UPDATES) ---
 async function executeBlast({ systemName, statusMsg, successEmbed, failEmbed, groups, token, controlState }) {
     let successCount = 0;
     let failCount = 0;
@@ -263,7 +209,7 @@ async function executeBlast({ systemName, statusMsg, successEmbed, failEmbed, gr
     controlState.isBlasting = false;
 }
 
-// Discord Client Instance
+// --- DISCORD CLIENT ---
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -286,6 +232,7 @@ client.on("messageCreate", async (message) => {
     if (command === "ping") return message.reply("🏓 Pong!");
     if (command === "hello") return message.reply(`👋 Hello, ${message.author.username}!`);
 
+    // Helper to create template embeds
     const createEmbedPair = (systemName) => {
         const successEmbed = new EmbedBuilder()
             .setTitle(`🚀 [${systemName}] Live Success Log`)
@@ -303,7 +250,7 @@ client.on("messageCreate", async (message) => {
         return { successEmbed, failEmbed };
     };
 
-    // RB1 Commands
+    // --- RB1 COMMANDS ---
     if (command === "rb1") {
         if (state.rb1.isBlasting) return message.reply("⚠️ RB1 broadcast is already running! Use `!rb1forcestop` first.");
         state.rb1.isBlasting = true;
@@ -332,7 +279,7 @@ client.on("messageCreate", async (message) => {
         return message.reply("🛑 Force stopping RB1 broadcast...");
     }
 
-    // RB2 Commands
+    // --- RB2 COMMANDS ---
     if (command === "rb2") {
         if (state.rb2.isBlasting) return message.reply("⚠️ RB2 broadcast is already running! Use `!rb2forcestop` first.");
         state.rb2.isBlasting = true;
@@ -361,7 +308,7 @@ client.on("messageCreate", async (message) => {
         return message.reply("🛑 Force stopping RB2 broadcast...");
     }
 
-    // Universal Commands
+    // --- UNIVERSAL COMMANDS ---
     if (command === "rbplayall") {
         let triggeredAny = false;
 
@@ -424,9 +371,4 @@ client.on("messageCreate", async (message) => {
     }
 });
 
-// Login Discord Bot
-if (MAIN_TOKEN) {
-    client.login(MAIN_TOKEN);
-} else {
-    console.error("❌ TOKEN environment variable is missing!");
-}
+client.login(MAIN_TOKEN);
