@@ -1,5 +1,18 @@
 require("dotenv").config();
 const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
+const express = require("express");
+
+// --- WEB SERVER FOR RENDER & CRONITOR ---
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => {
+    res.send("ORCA Broadcast Bot is online!");
+});
+
+app.listen(PORT, () => {
+    console.log(`🌐 HTTP Server running on port ${PORT} for uptime monitoring`);
+});
 
 // Universal fetch handler (Node 18+ native or node-fetch dynamic fallback)
 const webFetch = typeof fetch === "function" 
