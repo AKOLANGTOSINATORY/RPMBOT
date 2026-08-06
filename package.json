@@ -1,15 +1,20 @@
 {
-  "name": "orca-development-system",
+  "name": "nodejs",
   "version": "1.0.0",
-  "description": "ORCA Development Broadcast and Roblox Ranker Service",
+  "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "discord.js": "^14.18.0",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "noblox.js": "^5.6.0"
+    "@types/node": "^22.13.11",
+    "discord.js": "^14.27.0",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "noblox.js": "^6.2.0",
+    "node-fetch": "^3.3.2"
   }
 }
